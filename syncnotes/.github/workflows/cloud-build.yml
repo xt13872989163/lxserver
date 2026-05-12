@@ -1,0 +1,81 @@
+name: Build Android APK (Cloud)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: android/package-lock.json
+          
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+          cache-dependency-path: android/android/gradle/wrapper/gradle-wrapper.properties
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        
+      - name: Cache Android SDK
+        uses: actions/cache@v3
+        with:
+          path: ~/.android
+          key: ${{ runner.os }}-android-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-android-
+            
+      - name: Install dependencies
+        run: |
+          cd android
+          npm ci || npm install
+          
+      - name: Build JS Bundle
+        run: |
+          cd android
+          mkdir -p android/app/src/main/assets
+          npx expo export --platform android
+          
+      - name: Generate Android Project
+        run: |
+          cd android
+          npx expo prebuild --platform android --clean
+          
+      - name: Build Debug APK
+        run: |
+          cd android/android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+          
+      - name: Copy APK to output
+        run: |
+          cp android/android/app/build/outputs/apk/debug/app-debug.apk ./SyncNotes-debug.apk
+          ls -lh SyncNotes-debug.apk
+          
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SyncNotes-debug-apk
+          path: SyncNotes-debug.apk
+          retention-days: 30
+          
+      - name: Display APK size
+        run: |
+          echo "✅ APK built successfully!"
+          echo "Size: $(du -h SyncNotes-debug.apk | cut -f1)"
