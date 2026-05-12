@@ -16,6 +16,8 @@ export { ListManage, ListEvent, type ListEventType } from './list'
 
 export { DislikeManage, DislikeEvent, type DislikeEventType } from './dislike'
 
+export { NoteManage } from './note'
+
 export const featureVersion = {
   list: 1,
   dislike: 1,

@@ -2,14 +2,16 @@ import { UserDataManage } from './data'
 import {
   ListManage,
   DislikeManage,
+  NoteManage,
 } from '@/modules'
 
 export interface UserSpace {
   dataManage: UserDataManage
   listManage: ListManage
   dislikeManage: DislikeManage
-  getDecices: () => Promise<LX.Sync.KeyInfo[]>
-  removeDevice: (clientId: string) => Promise<void>
+  noteManage: NoteManage
+  getDecices: () =&gt; Promise&lt;LX.Sync.KeyInfo[]&gt;
+  removeDevice: (clientId: string) =&gt; Promise&lt;void&gt;
 }
 const users = new Map<string, UserSpace>()
 const renamingUsers = new Set<string>()
@@ -29,7 +31,7 @@ const seartDelayReleaseTimeout = (userName: string) => {
   }, delayTime))
 }
 
-export const getUserSpace = (userName: string) => {
+export const getUserSpace = (userName: string) =&gt; {
   if (renamingUsers.has(userName)) {
     throw new Error(`User ${userName} is being renamed, access denied temporarily`)
   }
@@ -41,15 +43,18 @@ export const getUserSpace = (userName: string) => {
     const dataManage = new UserDataManage(userName)
     const listManage = new ListManage(dataManage)
     const dislikeManage = new DislikeManage(dataManage)
+    const noteManage = new NoteManage(dataManage)
     users.set(userName, user = {
       dataManage,
       listManage,
       dislikeManage,
+      noteManage,
       async getDecices() {
         return this.dataManage.getAllClientKeyInfo()
       },
       async removeDevice(clientId) {
         await listManage.removeDevice(clientId)
+        await noteManage.removeDevice(clientId)
         await dataManage.removeClientKeyInfo(clientId)
       },
     })
